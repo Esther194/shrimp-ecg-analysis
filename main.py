@@ -10,11 +10,14 @@ from matplotlib.backends.backend_tkagg import (
     NavigationToolbar2Tk
 )
 from scipy.fft import fft, fftfreq
-w=0#波的個數
+
+waveNumber=0#波的個數
 wavein,waveout=[],[]#入波出波時間
 wave1,wave2=[],[]#作圖的波
+
+
 #圖
-def el(ax,l=0.5,begin=0, end=600,co='k'):
+def ECG(ax,l=0.5,begin=0, end=600,co='k'):
     a = pd.read_excel("data.xlsx")
     d = 0
     for i in range(begin, end):
@@ -27,13 +30,13 @@ def el(ax,l=0.5,begin=0, end=600,co='k'):
         wave1.extend([b, c])
         wave2.extend([0, c - b]) 
 
-def t(ax):
+def periodGraph(ax):
     ax.clear()
     global wave1
     global wave2
     ax.plot(wave1,wave2,linewidth='1',color='k')
     
-def f(ax):
+def FourierTransformGraph(ax):
     # 讀取心電圖數據，將其存儲在一個NumPy數組中
     begin,end=0,600
     a=pd.read_excel("data.xlsx")
@@ -47,13 +50,13 @@ def f(ax):
     ax.plot(frequencies, np.abs(fft_result))
     plt.show()
 
-#獲取入波出波點
-def g():
+#獲取入波和出波的時間點
+def getPoint ():
     a=pd.read_excel("data.xlsx")
     begin,end=0,600
     e=0#出波點計數器
     f=0#反向推算的標的
-    global w
+    global waveNumber
     global wavein,waveout#入波出波時間
     for i in range(begin,end):
         c=a.iat[i+1,0]#第二(i+1)筆資料
@@ -69,12 +72,12 @@ def g():
                 if(c<-0.04):    
                     e=1
                     waveout.append(f/1000)
-                    w=w+1
+                    waveNumber+=1
 #陣列轉換
-def cha(wave):
+def changeArray(wave):
     global wave1
     global wave2
-    global w
+    global waveNumber
     wave1.clear()
     wave2.clear()
     wave1.append(wave[0])
@@ -83,7 +86,7 @@ def cha(wave):
     wave2.append(0)
     wave2.append(wave[1]-wave[0])
     wave2.append(wave[1]-wave[0])
-    for i in range(0,w-2):
+    for i in range(0,waveNumber-2):
         wave1.append(wave[i+1])
         wave1.append(wave[i+1])
         wave1.append(wave[i+2])
@@ -93,7 +96,7 @@ def cha(wave):
     
 e=0#週期頻率變化按鈕
 #元件
-def men():
+def menu():
     menu=tk.OptionMenu((root), var, "心電圖", "頻率","傅立葉轉換","波型比較")
     menu.place(x=0,y=0)
     var.trace('w',show)
@@ -103,35 +106,96 @@ def tool(canvas,root):
     toolbar = NavigationToolbar2Tk(canvas, root)
     toolbar.update()
     
+class Counter:
+    def __init__(self, root, p, l, w, ax, canvas):
+        self.root = root
+        self.count1 = 1
+        self.count2 = 1
+        self.w = w
+        self.ax = ax
+        self.canvas = canvas
+
+        self.plus_button1 = tk.Button(root, command=lambda: self.plus1(), text=">")
+        self.minus_button1 = tk.Button(root, command=lambda: self.minus1(), text="<")
+        self.plus_button2 = tk.Button(root, command=lambda: self.plus2(), text=">")
+        self.minus_button2 = tk.Button(root, command=lambda: self.minus2(), text="<")
+
+        self.label1 = tk.Label(root, text=self.count1, font=(24))
+        self.label2 = tk.Label(root, text=self.count2, font=(24))
+
+        self.plus_button1.place(x=p+13, y=l-4)
+        self.minus_button1.place(x=p-20, y=l-3)
+        self.plus_button2.place(x=p+213, y=l-4)
+        self.minus_button2.place(x=p+180, y=l-3)
+
+        self.label1.place(x=p, y=l)
+        self.label2.place(x=p+200, y=l)
+    
+    def plus1(self):
+        if  self.count1 < self.w:
+            self.count1+=1
+            self.ax.clear()
+            self.label1.config(text=self.count1)
+            ECG(self.ax,5,int(wavein[self.count2-1]*1000),int(waveout[self.count2-1]*1000),'r')
+            ECG(self.ax,5,int(wavein[self.count1-1]*1000),int(waveout[self.count1-1]*1000),'b')
+            self.canvas.draw()
+            
+    def plus2(self):
+       if  self.count2 < self.w:
+           self.count2+=1
+           self.ax.clear()
+           self.label2.config(text=self.count2)
+           ECG(self.ax,5,int(wavein[self.count1-1]*1000),int(waveout[self.count1-1]*1000),'b')
+           ECG(self.ax,5,int(wavein[self.count2-1]*1000),int(waveout[self.count2-1]*1000),'r')
+           self.canvas.draw()
+           
+    def minus1(self):
+        if  self.count1 > 1:
+            self.count1-=1
+            self.ax.clear()
+            self.label1.config(text=self.count1)
+            ECG(self.ax,5,int(wavein[self.count2-1]*1000),int(waveout[self.count2-1]*1000),'r')
+            ECG(self.ax,5,int(wavein[self.count1-1]*1000),int(waveout[self.count1-1]*1000),'b')
+            self.canvas.draw()
+            
+    def minus2(self):
+       if  self.count2 > 1:
+           self.count2-=1
+           self.ax.clear()
+           self.label2.config(text=self.count2)
+           ECG(self.ax,5,int(wavein[self.count1-1]*1000),int(waveout[self.count1-1]*1000),'b')
+           ECG(self.ax,5,int(wavein[self.count2-1]*1000),int(waveout[self.count2-1]*1000),'r')
+           self.canvas.draw()
     
 #元件變化   
 
-def tb1(tb,ax,canvas):
+def periodFrequencyButton(tb,ax,canvas):
     global e
     global wave2
     tb2=["週期","頻率"]
     tb["text"]=tb2[e%2]
-    cha(wavein)   
+    changeArray(wavein)   
     if(e%2==1):
-        for i in range(2*w+3):
+        for i in range(2* waveNumber +3):
             if(wave2[i]!=0):
                 wave2[i]=1/wave2[i]
-        t(ax)
+        periodGraph(ax)
         ax.set_ylabel("frequency(Hz)")
     else:
-        t(ax)
+        periodGraph(ax)
         ax.set_ylabel("period(s)")
     canvas.draw()
     e+=1
-
+        
 def show(i,j,k):
     if(var.get()=="心電圖"):
         root1=tk.Tk()
         fig1=Figure()
         canvas1=FigureCanvasTkAgg(fig1,master=root1)
         canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
+        root1.state("zoomed")
         ax6=fig1.add_subplot()
-        el(ax6)
+        ECG(ax6)
         tool(canvas1,root1)
         canvas1.draw()
     elif(var.get()=="頻率"):
@@ -139,26 +203,29 @@ def show(i,j,k):
         fig1=Figure()
         canvas1=FigureCanvasTkAgg(fig1,master=root1)
         canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
+        root1.state("zoomed")
         ax6=fig1.add_subplot()
         tool(canvas1,root1)
-        tbu=tk.Button(root1,command=lambda:tb1(tbu,ax6,canvas1))
+        tbu=tk.Button(root1,command=lambda:periodFrequencyButton(tbu,ax6,canvas1))
         tbu.pack()
-        tb1(tbu,ax6,canvas1)
+        periodFrequencyButton(tbu,ax6,canvas1)
     elif(var.get()=="傅立葉轉換"):
         root1=tk.Tk()
         fig1=Figure()
         canvas1=FigureCanvasTkAgg(fig1,master=root1)
         canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
+        root1.state("zoomed")
         ax6=fig1.add_subplot()
-        f(ax6)
+        FourierTransformGraph(ax6)
         tool(canvas1,root1)
         canvas1.draw()
     elif(var.get()=="波型比較"):
-        global wavein,waveout#入波出波時間
+        global wavein,waveout,waveNumber#入波出波時間
         root1=tk.Tk()
         fig1=Figure()
         canvas1=FigureCanvasTkAgg(fig1,master=root1)
         canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
+        root1.state("zoomed")
         ax1=fig1.add_subplot()
         ax2=fig1.add_subplot()
         ax3=fig1.add_subplot()
@@ -168,14 +235,11 @@ def show(i,j,k):
         ax3.set_position([0.6,0.6,0.35,0.35])
         ax4.set_position([0.6,0.1,0.35,0.35])
         tool(canvas1,root1)
-        n,m=1,2
-        for i in [ax1,ax2,ax3,ax4]:
-            el(i,5,int(wavein[n]*1000),int(waveout[n]*1000),'b')
-            el(i,5,int(wavein[m]*1000),int(waveout[m]*1000),'r')
-            m+=1
-        
+        counter1= Counter(root1,250,290,waveNumber,ax1,canvas1)
+        counter2= Counter(root1,250,620,waveNumber,ax2,canvas1)
+        counter3= Counter(root1,950,290,waveNumber,ax3,canvas1)
+        counter4= Counter(root1,950,620,waveNumber,ax4,canvas1)
         canvas1.draw()
-
     
 root=tk.Tk()
 fig=Figure()
@@ -188,32 +252,21 @@ ax2.set_position([0.1,0.7,0.8,0.3])
 ax1.set_position([0.1,0.4,0.8,0.3])
 ax3.set_position([0.1,0.05,0.8,0.3])
 
-
-
-
 canvas=FigureCanvasTkAgg(fig,master=root)
 canvas.draw()
 canvas.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
 
-
 var=tk.StringVar(root)
-tb=tk.Button(root,command=lambda:tb1(tb,ax2,canvas))
+tb=tk.Button(root,command=lambda:periodFrequencyButton(tb,ax2,canvas))
 tb.place(relx=1.0,rely=0.0,anchor="ne")
-men()
+menu()
 tool(canvas,root)
 
-
-
-g()
-el(ax1)
-cha(wavein)
-tb1(tb,ax2,canvas)
-f(ax3)
-
-
-
-
-
+getPoint()
+ECG(ax1)
+changeArray(wavein)
+periodFrequencyButton(tb,ax2,canvas)
+FourierTransformGraph(ax3)
 
 canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 tk.mainloop()
