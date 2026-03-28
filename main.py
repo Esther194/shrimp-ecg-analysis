@@ -14,40 +14,21 @@ w=0#波的個數
 wavein,waveout=[],[]#入波出波時間
 wave1,wave2=[],[]#作圖的波
 #圖
-def ele(ax,begin=0, end=600):
-    a=pd.read_excel("data.xlsx")
-    begin,end=0,600
-    e=0#出波點計數器
-    f=0#反向推算的標的
-    for i in range(begin,end):
-        b=a.iat[i,0]#第一(i)筆資料
-        c=a.iat[i+1,0]#第二(i+1)筆資料
-        xpoints=np.array([(i/1000),((i+1)/1000)])
-        ypoints=np.array([b,c])
-        if(c>0.01 and i> f):
-            ax.plot(xpoints,ypoints,marker='o',linewidth='0.5',color='k')
-            f=i+50
-            e=0
-            if(f>end):
-                f=end
-            while(e==0):
-                f=f-1
-                b=a.iat[f,0]#第二(f)筆資料
-                c=a.iat[f-1,0]#第一(f-1)筆資料
-                if(c<-0.04):    
-                    xpoints=np.array([(f/1000),((f-1)/1000)])
-                    ypoints=np.array([b,c])
-                    ax.plot(xpoints,ypoints,marker='o',linewidth='0.5',color='b')
-                    e=1
-
-        else:
-            ax.plot(xpoints,ypoints,linewidth='0.5',color='k')
-    ax.set_ylabel("electric potential(V)")
-    ax.set_xlabel("time(s)")
+def el(ax,l=0.5,begin=0, end=600,co='k'):
+    a = pd.read_excel("data.xlsx")
+    d = 0
+    for i in range(begin, end):
+        b = a.iat[i, 0]  # 第一(i)筆資料
+        c = a.iat[i + 1, 0]  # 第二(i+1)筆資料
+        xpoints = np.array([(d / 1000), ((d + 1) / 1000)])
+        ypoints = np.array([b, c])
+        ax.plot(xpoints, ypoints, linewidth=l, color=co)
+        d += 1
+        wave1.extend([b, c])
+        wave2.extend([0, c - b]) 
 
 def t(ax):
     ax.clear()
-    global w
     global wave1
     global wave2
     ax.plot(wave1,wave2,linewidth='1',color='k')
@@ -65,7 +46,7 @@ def f(ax):
     # 繪製頻譜
     ax.plot(frequencies, np.abs(fft_result))
     plt.show()
-    
+
 #獲取入波出波點
 def g():
     a=pd.read_excel("data.xlsx")
@@ -93,6 +74,7 @@ def g():
 def cha(wave):
     global wave1
     global wave2
+    global w
     wave1.clear()
     wave2.clear()
     wave1.append(wave[0])
@@ -112,7 +94,7 @@ def cha(wave):
 e=0#週期頻率變化按鈕
 #元件
 def men():
-    menu=tk.OptionMenu((root), var, "心電圖", "頻率","傅立葉轉換","振幅")
+    menu=tk.OptionMenu((root), var, "心電圖", "頻率","傅立葉轉換","波型比較")
     menu.place(x=0,y=0)
     var.trace('w',show)
     var.set("菜單")
@@ -149,7 +131,7 @@ def show(i,j,k):
         canvas1=FigureCanvasTkAgg(fig1,master=root1)
         canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
         ax6=fig1.add_subplot()
-        ele(ax6)
+        el(ax6)
         tool(canvas1,root1)
         canvas1.draw()
     elif(var.get()=="頻率"):
@@ -171,19 +153,40 @@ def show(i,j,k):
         f(ax6)
         tool(canvas1,root1)
         canvas1.draw()
-
+    elif(var.get()=="波型比較"):
+        global wavein,waveout#入波出波時間
+        root1=tk.Tk()
+        fig1=Figure()
+        canvas1=FigureCanvasTkAgg(fig1,master=root1)
+        canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
+        ax1=fig1.add_subplot()
+        ax2=fig1.add_subplot()
+        ax3=fig1.add_subplot()
+        ax4=fig1.add_subplot()
+        ax1.set_position([0.1,0.6,0.35,0.35])
+        ax2.set_position([0.1,0.1,0.35,0.35])
+        ax3.set_position([0.6,0.6,0.35,0.35])
+        ax4.set_position([0.6,0.1,0.35,0.35])
+        tool(canvas1,root1)
+        n,m=1,2
+        for i in [ax1,ax2,ax3,ax4]:
+            el(i,5,int(wavein[n]*1000),int(waveout[n]*1000),'b')
+            el(i,5,int(wavein[m]*1000),int(waveout[m]*1000),'r')
+            m+=1
+        
+        canvas1.draw()
 
     
 root=tk.Tk()
 fig=Figure()
-
-ax1=fig.add_subplot()
+a = pd.read_excel("data.xlsx")
 ax2=fig.add_subplot()
+ax1=fig.add_subplot()
 ax3=fig.add_subplot()
 
-ax2.set_position([0.1,0.7,0.8,0.2])
-ax1.set_position([0.1,0.4,0.8,0.2])
-ax3.set_position([0.1,0.1,0.8,0.2])
+ax2.set_position([0.1,0.7,0.8,0.3])
+ax1.set_position([0.1,0.4,0.8,0.3])
+ax3.set_position([0.1,0.05,0.8,0.3])
 
 
 
@@ -201,8 +204,8 @@ tool(canvas,root)
 
 
 
-ele(ax1)
 g()
+el(ax1)
 cha(wavein)
 tb1(tb,ax2,canvas)
 f(ax3)
