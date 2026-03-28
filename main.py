@@ -1,25 +1,24 @@
-import pandas as pd
 import tkinter as tk
 import matplotlib
 from matplotlib.figure import Figure
 import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
 matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg,
     NavigationToolbar2Tk
 )
+from scipy.fft import fft, fftfreq
 w=0#波的個數
 wavein,waveout=[],[]#入波出波時間
 wave1,wave2=[],[]#作圖的波
 #圖
-def ele(ax):
+def ele(ax,begin=0, end=600):
     a=pd.read_excel("data.xlsx")
     begin,end=0,600
     e=0#出波點計數器
     f=0#反向推算的標的
-    global w
-  
     for i in range(begin,end):
         b=a.iat[i,0]#第一(i)筆資料
         c=a.iat[i+1,0]#第二(i+1)筆資料
@@ -27,7 +26,6 @@ def ele(ax):
         ypoints=np.array([b,c])
         if(c>0.01 and i> f):
             ax.plot(xpoints,ypoints,marker='o',linewidth='0.5',color='k')
-            wavein.append(i/1000)
             f=i+50
             e=0
             if(f>end):
@@ -37,12 +35,11 @@ def ele(ax):
                 b=a.iat[f,0]#第二(f)筆資料
                 c=a.iat[f-1,0]#第一(f-1)筆資料
                 if(c<-0.04):    
-                    waveout.append(f/1000)
                     xpoints=np.array([(f/1000),((f-1)/1000)])
                     ypoints=np.array([b,c])
                     ax.plot(xpoints,ypoints,marker='o',linewidth='0.5',color='b')
                     e=1
-                    w=w+1
+
         else:
             ax.plot(xpoints,ypoints,linewidth='0.5',color='k')
     ax.set_ylabel("electric potential(V)")
@@ -54,8 +51,45 @@ def t(ax):
     global wave1
     global wave2
     ax.plot(wave1,wave2,linewidth='1',color='k')
-
-  
+    
+def f(ax):
+    # 讀取心電圖數據，將其存儲在一個NumPy數組中
+    begin,end=0,600
+    a=pd.read_excel("data.xlsx")
+    e=a[begin:end]
+    # 計算心電圖信號的取樣率和時間間隔
+    s = 1000  # 取樣率，假設為1000Hz
+    fft_result = fft(e)
+    # 計算頻率軸
+    frequencies = fftfreq(len(e), 1/s)
+    # 繪製頻譜
+    ax.plot(frequencies, np.abs(fft_result))
+    plt.show()
+    
+#獲取入波出波點
+def g():
+    a=pd.read_excel("data.xlsx")
+    begin,end=0,600
+    e=0#出波點計數器
+    f=0#反向推算的標的
+    global w
+    global wavein,waveout#入波出波時間
+    for i in range(begin,end):
+        c=a.iat[i+1,0]#第二(i+1)筆資料
+        if(c>0.01 and i> f):
+            wavein.append(i/1000)
+            f=i+50
+            e=0
+            if(f>end):
+                f=end
+            while(e==0):
+                f=f-1
+                c=a.iat[f-1,0]#第一(f-1)筆資料
+                if(c<-0.04):    
+                    e=1
+                    waveout.append(f/1000)
+                    w=w+1
+#陣列轉換
 def cha(wave):
     global wave1
     global wave2
@@ -119,15 +153,24 @@ def show(i,j,k):
         tool(canvas1,root1)
         canvas1.draw()
     elif(var.get()=="頻率"):
-        root2=tk.Tk()
-        fig2=Figure()
-        canvas2=FigureCanvasTkAgg(fig2,master=root2)
-        canvas2.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
-        ax7=fig2.add_subplot()
-        tool(canvas2,root2)  
-        tbu=tk.Button(root2,command=lambda:tb1(tbu,ax7,canvas2))
+        root1=tk.Tk()
+        fig1=Figure()
+        canvas1=FigureCanvasTkAgg(fig1,master=root1)
+        canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
+        ax6=fig1.add_subplot()
+        tool(canvas1,root1)
+        tbu=tk.Button(root1,command=lambda:tb1(tbu,ax6,canvas1))
         tbu.pack()
-        tb1(tbu,ax7,canvas2)
+        tb1(tbu,ax6,canvas1)
+    elif(var.get()=="傅立葉轉換"):
+        root1=tk.Tk()
+        fig1=Figure()
+        canvas1=FigureCanvasTkAgg(fig1,master=root1)
+        canvas1.get_tk_widget().pack(side=tk.TOP,fill=tk.BOTH,expand=1)
+        ax6=fig1.add_subplot()
+        f(ax6)
+        tool(canvas1,root1)
+        canvas1.draw()
 
 
     
@@ -138,10 +181,9 @@ ax1=fig.add_subplot()
 ax2=fig.add_subplot()
 ax3=fig.add_subplot()
 
-ax1.set_position([0.1,0.7,0.8,0.2])
-ax2.set_position([0.1,0.4,0.8,0.2])
+ax2.set_position([0.1,0.7,0.8,0.2])
+ax1.set_position([0.1,0.4,0.8,0.2])
 ax3.set_position([0.1,0.1,0.8,0.2])
-
 
 
 
@@ -160,8 +202,10 @@ tool(canvas,root)
 
 
 ele(ax1)
+g()
 cha(wavein)
 tb1(tb,ax2,canvas)
+f(ax3)
 
 
 
