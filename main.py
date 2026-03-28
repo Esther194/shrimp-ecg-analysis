@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import filedialog
 import matplotlib
 from matplotlib.figure import Figure
 import pandas as pd
@@ -10,6 +11,7 @@ from matplotlib.backends.backend_tkagg import (
     NavigationToolbar2Tk
 )
 from scipy.fft import fft, fftfreq
+
 #類別，用於繪圖、顯示元件
 class G:
     def __init__(self,b=0,e=600):
@@ -18,7 +20,11 @@ class G:
         self.waveout=[]#出波時間
         self.wave1=[]#作圖的波
         self.wave2=[]#作圖的波
-        self.a=pd.read_excel("data.xlsx")#讀檔案
+        
+        
+        self.selected_file = filedialog.askopenfilename(parent=root)#選檔案
+        self.file= pd.read_excel(self.selected_file)#讀檔案
+        
         self.begin=b#設定開始繪圖的時間
         self.end=e#設定結束繪圖的時間
         self.e=0
@@ -26,8 +32,8 @@ class G:
     def ECG(self,ax,l=0.5,begin=0, end=600,co='k'):
         d = 0#計算時間(y座標)
         for i in range(begin, end):
-            b = self.a.iat[i, 0]  # 第一(i)筆資料
-            c = self.a.iat[i + 1, 0]  # 第二(i+1)筆資料
+            b = self.file.iat[i, 0]  # 第一(i)筆資料
+            c = self.file.iat[i + 1, 0]  # 第二(i+1)筆資料
             xpoints = np.array([(d / 1000), ((d + 1) / 1000)])
             ypoints = np.array([b, c])
             ax.plot(xpoints, ypoints, linewidth=l, color=co)
@@ -40,7 +46,7 @@ class G:
         ax.plot(self.wave1,self.wave2,linewidth='1',color='k')#重新使用wave1、wave2繪製圖形
     #繪製傅立葉轉換   
     def FourierTransformGraph(self,ax):
-        e=self.a[self.begin:self.end]# 計算心電圖信號的取樣率和時間間隔
+        e=self.file[self.begin:self.end]# 計算心電圖信號的取樣率和時間間隔
         s = 1000  # 取樣率，假設為1000Hz
         fft_result = fft(e)# 計算頻率軸
         frequencies = fftfreq(len(e), 1/s)# 繪製頻譜
@@ -52,7 +58,7 @@ class G:
         e=0#出波點計數器
         f=0#反向推算的標的
         for i in range(self.begin,self.end):
-            c=self.a.iat[i+1,0]#設第二(i+1)筆資料為c點
+            c=self.file.iat[i+1,0]#設第二(i+1)筆資料為c點
             if(c>0.01 and i> f):#如果c點的電位高於0.01且距上一個入波點超過50微秒
                 self.wavein.append(i/1000)#在wavein增加此時的時間點
                 f=i+50
@@ -61,7 +67,7 @@ class G:
                     f=self.end
                 while(e==0):
                     f=f-1
-                    c=self.a.iat[f-1,0]#設第一(f-1)筆資料為c點
+                    c=self.file.iat[f-1,0]#設第一(f-1)筆資料為c點
                     if(c<-0.04):#如果c點的電位低於-0.04且之前的入波點大於出波點    
                         e=1#已記錄出波點
                         self.waveout.append(f/1000)#在waveout增加此時的時間點
@@ -258,9 +264,9 @@ tb.place(relx=1.0,rely=0.0,anchor="ne")
 
 A.getPoint()
 A.ECG(ax1)
+A.FourierTransformGraph(ax3)
 A.changeArray(A.wavein)
 A.periodFrequencyButton(tb,ax2,canvas)
-A.FourierTransformGraph(ax3)
 
 A.menu()
 A.tool(canvas,root)
